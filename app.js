@@ -227,6 +227,7 @@ app.configure(function(){
 // sendUserActivation is for when a user registers and
 // first needs to activate their account to use it.
 function sendUserActivation( user ) {
+  console.log("Sending User Activation");
   var message = {
     'to'				: user.email,
 
@@ -242,6 +243,7 @@ function sendUserActivation( user ) {
     }
   };
 
+  console.log(message);
   // Email is sent here
   mailer.send( message, function( err, result ) {
     if( err ) {
@@ -300,6 +302,9 @@ function loggedIn( req, res, next ) {
 
 // This loads the user if logged in
 function loadUser( req, res, next ) {
+  console.log("loading user, going to print the session");
+  //console.log(req.session);
+  console.log("");
   var sid = req.sessionID;
 
   console.log( 'got request from session ID: %s', sid );
@@ -425,6 +430,8 @@ function loadCourse( req, res, next ) {
       // authorized to see or interact with anything related to that
       // school.
       course.authorize( user, function( authorized )  {
+        console.log("Loading a course, authorized a user to see courses");
+        console.log(authorized);
         req.course.authorized = authorized;
 
         next();
@@ -464,7 +471,7 @@ function loadLecture( req, res, next ) {
 // This is a lot more complicated than the above
 // due to public/private handling of notes.
 function loadNote( req, res, next ) {
-  var user	 = req.user ? req.user : false;
+  var user   = req.user ? req.user : false;
   var noteId = req.params.id;
 
   Note.findById( noteId, function( err, note ) {
@@ -480,10 +487,7 @@ function loadNote( req, res, next ) {
         } else if ( note.public ) {
           // If not authorized, but the note is public, then
           // designate the note read only (RO) and store req.note
-          // FIXME: this should be req.RO = true, disabled due to auth issues
-          // TODO: ^^^ Important
-          //req.RO = true;
-          req.RO = false;
+          req.RO = true;
           req.note = note;
 
           next();
@@ -609,51 +613,7 @@ app.get( '/schools', checkAjax, loadUser, function( req, res ) {
 app.get( '/school/:name', checkAjax, loadUser, loadSchool, function( req, res ) {
   var school = req.school;
   var user = req.user;
-  var courses;
   console.log( 'loading a school by school/:id now name' );
-
-  //school.authorize( user, function( authorized ) {
-    // This is used to display interface elements for those users
-    // that are are allowed to see th)m, for instance a 'New Course' button.
-    //var sanitizedSchool = school.sanitized;
-    var sanitizedSchool = {
-      _id: school.id,
-      name: school.name,
-      description: school.description,
-      url: school.url
-    };
-    //sanitizedSchool.authorized = authorized;
-    // Find all courses for school by it's id and sort by name
-    Course.find( { 'school' : school._id } ).sort( 'name', '1' ).run( function( err, courses ) {
-      // If any courses are found, set them to the appropriate school, otherwise
-      // leave empty.
-      sys.puts(courses);
-      if( courses.length > 0 ) {
-        courses = courses.filter(function(course) {
-          if (!course.deleted) return course;
-        }).map(function(course) {
-          return course.sanitized;
-        });
-      } else {
-        school.courses = [];
-      }
-      sanitizedSchool.courses = courses;
-      sys.puts(courses);
-
-      // This tells async (the module) that each iteration of forEach is
-      // done and will continue to call the rest until they have all been
-      // completed, at which time the last function below will be called.
-      sendJson(res, { 'school': sanitizedSchool, 'user': user.sanitized })
-    });
-  //});
-});
-
-// FIXME: version of the same using school slugs instead of ids
-// TODO: merge this with the :id funciton or depricate it
-app.get( '/schoolslug/:slug', checkAjax, loadUser, loadSchoolSlug, function( req, res ) {
-  var school = req.school;
-  var user = req.user;
-  console.log( 'loading a schoolslug/:slug' );
 
   school.authorize( user, function( authorized ) {
     // This is used to display interface elements for those users
@@ -662,24 +622,80 @@ app.get( '/schoolslug/:slug', checkAjax, loadUser, loadSchoolSlug, function( req
     sanitizedSchool.authorized = authorized;
     // Find all courses for school by it's id and sort by name
     Course.find( { 'school' : school._id } ).sort( 'name', '1' ).run( function( err, courses ) {
-      // If any courses are found, set them to the appropriate school, otherwise
-      // leave empty.
+
       if( courses.length > 0 ) {
-        sanitizedSchool.courses = courses.filter(function(course) {
-          if (!course.deleted) return course;
-        }).map(function(course) {
-          return course.sanitized;
+        console.log("courses is greater than 0: " + courses.length);
+        var sanitizedCourses = [];
+
+        courses.map(function(course) {
+          var i = 0;
+          Lecture.count( { 'course': course._id }, function( err, count) {
+            console.log('count ' +count);
+            var sanitizedCourse = course.sanitized;
+            sanitizedCourse.lectCount = count;
+            i++;
+            console.log('i '+i);
+          });
+          console.log("have sane courses now");
+          sendJson(res, { 'school': {
+              _id: sanitizedSchool._id,
+              name: sanitizedSchool.name,
+              description: sanitizedSchool.description,
+              url: sanitizedSchool.url,
+              courses: sanitizedCourses
+            },
+              'user': user.sanitized
+          });
         });
+
+
       } else {
-        sanitizedSchool.courses = [];
+        // if I init .courses above, this isn't needed
+        console.log('somenow no courses');
+        var safeSchool =  {
+            _id: sanitizedSchool._id,
+            name: sanitizedSchool.name,
+            description: sanitizedSchool.description,
+            url: sanitizedSchool.url,
+            courses: []
+        }
+        sendJson(res, { 'school': safeSchool, 'user': user.sanitized });
       }
-      // This tells async (the module) that each iteration of forEach is
-      // done and will continue to call the rest until they have all been
-      // completed, at which time the last function below will be called.
-      sendJson(res, { 'school': sanitizedSchool, 'user': user.sanitized })
     });
   });
 });
+/*
+      if (err) console.log("error");
+      function san_courses(course) {
+        Lecture.count( { 'course': course._id }, function( err, count) {
+          // TODO: replace 99 with count
+          if (err) console.log("error!");
+          console.log("99 problems and a bitch is one: " +count);
+          sanitizedCourses.push( {
+              _id: course._id,
+              name: course.name,
+              number: course.number || 'None',
+              description: course.description || 'None',
+              subject: course.subject || 'None',
+              department: course.department || 'None',
+              lectures: count
+          });
+          if (sanitizedCourses.length >= courses.length) {
+            console.log("sanitized is >= courses");
+            sendJson(res, {
+                'school': {
+                  _id: sanitizedSchool._id,
+                  name: sanitizedSchool.name,
+                  description: sanitizedSchool.description,
+                  url: sanitizedSchool.url,
+                  courses: sanitizedCourses
+                  },
+                'user': user.sanitized });
+            }
+            console.log('loop count ' +sanitizedCourses.length);
+        });
+        */
+
 
 
 // Recieves new course form

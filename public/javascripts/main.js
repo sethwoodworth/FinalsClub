@@ -198,6 +198,7 @@ router.add('school', function(data, cb) {
   //$('#new_course').unbind();
   $('#form_course').hide().unbind();
 
+  console.log(data.school);
   response = {
     id: 'course',
     data: data.school.courses
@@ -234,6 +235,8 @@ router.add('school', function(data, cb) {
 
 // go to the page that lists the lectures for a specific course
 router.add('course', function(data, cb) {
+  console.log("Loading a course");
+  console.log(data.course);
   $('#school_link').addClass('active');
   $('.sub_menu').hide();
   $('#new_lecture').unbind();
@@ -273,6 +276,8 @@ router.add('course', function(data, cb) {
   }
 
   if (data.course.authorized) {
+    console.log("This course was authorized for this user");
+    console.log(data.course.authorized);
     $('.sub_menu').show();
 		var form = $('#form_lecture');
 

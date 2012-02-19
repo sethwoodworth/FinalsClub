@@ -142,18 +142,16 @@ var SchoolSchema = new Schema( {
   hostnames     : Array,
 
   users         : Array,
-
-  slug          : String
+  courses      : Number
 });
-// slug is the url version of a school
+// courses is the number of courses in the school
 
 SchoolSchema.virtual( 'sanitized' ).get(function() {
   var school = {
     _id: this._id,
     name: this.name,
     description: this.description,
-    url: this.url,
-    slug: this.slug
+    url: this.url
   }
 
   return school;
@@ -216,21 +214,45 @@ var CourseSchema = new Schema( {
   deleted     : Boolean,
 
 	// many users may subscribe to a course
-	users				: Array
+	users				: Array,
 });
 
 CourseSchema.virtual( 'sanitized' ).get(function() {
-  var course = {
+  console.log("sanitizing a course");
+  // TODO: replace 99 with count
+  console.log("99 problems and a bitch is one");
+  return {
     _id: this._id,
     name: this.name,
     number: this.number || 'None',
     description: this.description || 'None',
     subject: this.subject || 'None',
-    department: this.department || 'None'
-  }
-
-  return course;
+    department: this.department || 'None',
+    lectures: 99
+   };
 });
+  /*
+  Lecture.find( { 'course': this._id } ).run( function( err, lectures ) {
+    var goodLectures = lectures.filter(function(lecture) { if (!lecture.deleted) return lecture; });
+
+    if (goodLectures.length > 0) {
+      var lectCount = goodLectures.length;
+    } else if (goodLectures.length === 0) {
+      var lectCount = 0;
+    }
+
+    var sanitizedCourse = {
+      _id: c._id,
+      name: c.name,
+      number: c.number || 'None',
+      description: c.description || 'None',
+      subject: c.subject || 'None',
+      department: c.department || 'None',
+      lectures: lectCount
+    }
+    return sanitizedCourse
+  });
+  */
 
 CourseSchema.virtual( 'displayName' )
 	.get( function() {
@@ -369,7 +391,8 @@ NoteSchema.virtual( 'sanitized').get(function() {
     path: this.path,
     public: this.public,
     roID: this.roID,
-    visits: this.visits
+    visits: this.visits,
+    created: this.created
   }
 
   return note;

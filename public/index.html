@@ -299,15 +299,40 @@
 										</div>
 									</header>
 									<div class="main-content">
+
+                    <script id="lectureTmpl" type="text/x-jquery-tmpl">
+                    <div class="course">
+                        <div class="course-content">
+                            <a class="course-name" href="/course/${_id}">
+                                ${number}: ${name}
+                            </a>
+                            <p class="course-description">
+                                This is placeholder description text, an intro to description in the nature of things that is quite and very and yes!
+                            </p>
+                            <div class="dept">${department}</div>
+                        </div>
+                        <aside class="course-data">
+                            <div class="course-data-item">
+                                <div class="course-data-number">N ${lectures}</div>
+                                <div class="course-data-description">lectures</div>
+                            </div>
+                        </aside>
+                    </div> <!-- .course -->
+                    </script>
+
 										<div class="lectures">
 											<div class="proto lecture" id=PROTO_lecture>
 												<a href="/lecture/___id__" class="lecture-name">__name__</a>
 												<div class="lecture-created-at">Created: __date__</div>
 											</div>
 										</div>
+
+
+
+
 									</div>
 									<div class="sidebar">
-										<form method="POST" id="form_lecture">
+										<form method="POST" id="form_lecture" style="display: none">
 											<header class="form-header">
 												<h4>Create New Lecture</h4>
 												<p>Use this form to create a new lecture. After creating the lecture, you and your classmates can add as many note pads as necessary.</p>
@@ -328,10 +353,10 @@
 								</div>
           <!--================================================================= -->
                 <div class=page id=pg_notes>
-									<header class="breadcrumb">
-											<a href="/"><span class="action">&#139; Back</span><span class="location">&nbsp;to Notes</span></a>
-									</header>
-									<header class="subheader">
+                  <header class="breadcrumb">
+                      <a href="/"><span class="action">&#139; Back</span><span class="location">&nbsp;to Notes</span></a>
+                  </header>
+                  <header class="subheader">
                     <div class="proto notes_head" id=PROTO_notes_head>
                         <h2>Note Pads for Course __number__ : __name__</h2>
 												<h4>Subject:<span class="light futura">__subject__</span></h4>
