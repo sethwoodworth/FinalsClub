@@ -610,58 +610,68 @@ app.get( '/schools', checkAjax, loadUser, function( req, res ) {
   });
 });
 
+function lectureJoiner(afterAllCallback) {
+  var toDo = 0; // init
+
+  // for each j()
+  return function(task, callback){
+    toDo++;
+    setTimeout(function() {
+      task(function() {
+        callback();
+        toDo--;
+        if (toDo <= 0) afterAllCallback();
+      });
+    }, 1);
+  }
+}
+
 app.get( '/school/:name', checkAjax, loadUser, loadSchool, function( req, res ) {
   var school = req.school;
   var user = req.user;
   console.log( 'loading a school by school/:id now name' );
 
   school.authorize( user, function( authorized ) {
-    // This is used to display interface elements for those users
+    // This authorize is used to display interface elements for those users
     // that are are allowed to see th)m, for instance a 'New Course' button.
     var sanitizedSchool = school.sanitized;
     sanitizedSchool.authorized = authorized;
+    sanitizedSchool.courses = [];
     // Find all courses for school by it's id and sort by name
-    Course.find( { 'school' : school._id } ).sort( 'name', '1' ).run( function( err, courses ) {
 
-      if( courses.length > 0 ) {
-        console.log("courses is greater than 0: " + courses.length);
-        var sanitizedCourses = [];
-
-        courses.map(function(course) {
-          var i = 0;
-          Lecture.count( { 'course': course._id }, function( err, count) {
-            console.log('count ' +count);
-            var sanitizedCourse = course.sanitized;
-            sanitizedCourse.lectCount = count;
-            i++;
-            console.log('i '+i);
-          });
-          console.log("have sane courses now");
-          sendJson(res, { 'school': {
-              _id: sanitizedSchool._id,
-              name: sanitizedSchool.name,
-              description: sanitizedSchool.description,
-              url: sanitizedSchool.url,
-              courses: sanitizedCourses
-            },
-              'user': user.sanitized
-          });
-        });
-
-
-      } else {
-        // if I init .courses above, this isn't needed
-        console.log('somenow no courses');
-        var safeSchool =  {
-            _id: sanitizedSchool._id,
-            name: sanitizedSchool.name,
-            description: sanitizedSchool.description,
-            url: sanitizedSchool.url,
-            courses: []
-        }
-        sendJson(res, { 'school': safeSchool, 'user': user.sanitized });
-      }
+    // init a joininer returning helper
+    var j = new lectureJoiner(function(sanitizedSchool) {
+      // the last thing that happens after all of the tasks are queued
+      console.log("starting joiner");
+      sendJson(res, { 'school': {
+          _id: sanitizedSchool._id,
+          name: sanitizedSchool.name,
+          description: sanitizedSchool.description,
+          url: sanitizedSchool.url,
+          courses: sanitizedCourses
+        },
+          'user': user.sanitized
+      });
     });
+
+    Course.find( { 'school' : school._id } ).sort( 'name', '1' ).each( function( err, course ) {
+      if( err ) { console.log("something went wrong when recalling a course");}
+
+
+        j( function(course){
+              console.log("this should have a course: "+ course);
+              Lecture.count( { 'course': course._id }, function( err, count) {
+                  console.log("getting a lecture count: " +course._id + ' ' + count);
+                  // push onto the saneCourses list the course with sane course and lecture
+                  var sanitizedCourse = course.sanitized;
+                  sanitizedCourse.lectCount = count;
+                  sanitizedSchool.courses.push(sanitizedCourse);
+                })
+              }, function(){ console.log("lecture callback");}
+        ); //end of j()
+      });
+
+
   });
 });
 /*
